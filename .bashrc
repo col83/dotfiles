@@ -1,25 +1,22 @@
 
+# Disable the terminal bell
+set bell-style none
+bind 'set bell-style none'
+
 # Interactive shell only
 [[ $- != *i* ]] && return
 
 
 # Aliases
 
-alias cls='clear; echo'
+alias cls='printf "\033c"; echo'
 
 if command -v watch >/dev/null 2>&1; then
-    alias watch='watch -c -n 1 -p -t -x'
+    alias watch='watch -e -t -c -n 1 -p -x "$@"'
 fi
 
 alias mnt='udisksctl mount -b'
 alias umnt='udisksctl unmount -b'
-
-# $PATH listing
-lspath() {
-    echo
-    echo $PATH | tr ':' '\n' | sort | uniq
-    echo
-}
 
 # fastfetch
 if command -v fastfetch >/dev/null 2>&1; then
@@ -55,24 +52,25 @@ else
 
     ll() {
         echo
-        ls -l "$@"
+        ls -l --color=auto "$@"
         echo
     }
 
     lll() {
         echo
-        ls -lA "$@"
+        ls -lA --color=auto "$@"
         echo
     }
 
 fi
 
+alias ..='cd ..'
 
 # Greeting
 # Disable default greeting/noise
 unset MAILCHECK
 
-# Prompt
+# Enhanced colorful prompt
 __prompt_command() {
 
     local priv_symbol='$'
@@ -111,6 +109,57 @@ __prompt_command() {
 
 PROMPT_COMMAND="__prompt_command"
 
+# $PATH listing
+lspath() {
+    echo
+    printf '%s\n' "$PATH" |
+        tr ':' '\n' |
+        while IFS= read -r path; do
+            realpath -e -- "$path"
+        done |
+        sort -u
+    echo
+}
+
+lspath() {
+    local red='\033[31m'
+    local yellow='\033[33m'
+    local reset='\033[0m'
+
+    declare -A paths
+
+    while IFS= read -r path; do
+        [[ -z "$path" ]] && continue
+
+        if [[ -d "$path" ]]; then
+            # Existing directory — resolve symlinks
+            real=$(realpath -e -- "$path")
+            paths["$real"]=ok
+        else
+            # Missing or invalid PATH entry
+            paths["$path"]=missing
+        fi
+    done < <(printf '%s\n' "$PATH" | tr ':' '\n')
+
+    echo
+
+    for path in "${!paths[@]}"; do
+        printf '%s\t%s\n' "${paths[$path]}" "$path"
+    done |
+        sort -k2 |
+        while IFS=$'\t' read -r status path; do
+            case "$status" in
+                ok)
+                    printf '%s\n' "$path"
+                    ;;
+                missing)
+                    printf '%b%s%b\n' "$red" "$path" "$reset"
+                    ;;
+            esac
+        done
+
+    echo
+}
 
 # PATH
 

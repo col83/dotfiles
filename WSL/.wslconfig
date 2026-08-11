@@ -1,0 +1,11 @@
+[wsl2]
+memory=60GB
+processors=8
+swap=4GB
+localhostForwarding=true
+
+[experimental]
+autoMemoryReclaim=gradual
+# firewall=true
+# networkingMode=mirrored
+# dnsTunneling=true
