@@ -1,13 +1,27 @@
 #!/usr/bin/bash
 set -euo pipefail
 
+
+ENABLE_INTEROP=true
+SHELL_TO_INSTALL="fish"
+
+
+if [ ! -f "/etc/wsl-distribution.conf" ]; then
+    echo; echo "Not a WSL distribution. Aborting."; echo
+    exit 0
+fi
+
 if [[ $EUID -ne 0 ]]; then
     echo; echo "Run as root"; echo
     exit 1
 fi
 
+LOCKFILE="/etc/wsl.lock"
+if [ -f "${LOCKFILE}" ]; then
+    echo; echo "Lockfile exists: $LOCKFILE. Aborting."; echo
+    exit 0
+fi
 
-SHELL_TO_INSTALL="fish"
 
 # dont use "ID_LIKE"
 if [ -f "/etc/os-release" ]; then
@@ -134,22 +148,32 @@ cat << 'EOF' > "/etc/wsl.conf"
 [boot]
 systemd=true
 
-[interop]
-enabled=false
-appendWindowsPath=false
+[automount]
+enabled=true
 
 [gpu]
-enabled=false
+enabled=true
 
 [network]
 generateHosts=false
 generateResolvConf=false
 EOF
 
+if [ "${ENABLE_INTEROP}" == true ]; then
+    cat << 'EOF' >> "/etc/wsl.conf"
+
+[interop]
+enabled=true
+appendWindowsPath=false
+EOF
+
+    setup_interop_utils
+fi
+
 setup_lang() {
 
 if [ ! -f "/etc/locale.gen.bak" ]; then
-	cp "/etc/locale.gen" "/etc/locale.gen.bak"
+    cp "/etc/locale.gen" "/etc/locale.gen.bak"
 fi
 
 cat << 'EOF' > "/etc/locale.gen"
@@ -157,8 +181,9 @@ en_US.UTF-8 UTF-8
 ru_RU.UTF-8 UTF-8
 zh_CN.UTF-8 UTF-8
 EOF
-echo
-locale-gen
+
+echo; locale-gen
+
 export LANGUAGE=en_US.UTF-8
 echo 'LANG=en_US.UTF-8' > "/etc/locale.conf"
 
@@ -254,11 +279,11 @@ setup_system() {
   setup_system_debian() {
 
     for file in update-motd.sh Z97-byobu.sh Z99-cloud-locale-test.sh Z99-cloudinit-warnings.sh; do
-        rm -f "/etc/profile.d/$file"
+        rm -f "/etc/profile.d/${file}"
     done
 
     for dir in ubuntu-advantage update-motd.d; do
-        rm -rf "/etc/$dir"
+        rm -rf "/etc/${dir:?}/"
     done
 
   }
@@ -351,7 +376,7 @@ EOF
 
 pacman-key --init
 pacman-key --populate archlinux
-pacman-key --populate ${OS_ID} 2>/dev/null || true
+pacman-key --populate "${OS_ID}" 2>/dev/null || true
 
 }
 
@@ -378,18 +403,23 @@ done
 
 "$pkg_manager" "${pkg_manager_args[@]}" "${resolved_packages[@]}"; echo
 
+
 # xdg-user-dirs-update
 mkdir -p "$HOME/Documents"
 
 if command -v "$SHELL_TO_INSTALL" >/dev/null 2>&1; then
     new_shell=$(command -v "$SHELL_TO_INSTALL")
 
+    # if shell is fish then just ignore warning
     if [ "$SHELL" != "$new_shell" ]; then
         chsh -s "$new_shell" 1>/dev/null
     fi
 fi
 
+touch "${LOCKFILE}"
+
 # not every shell read .profile
 if command -v "$SHELL_TO_INSTALL" >/dev/null 2>&1; then
     "$SHELL_TO_INSTALL"
 fi
+
