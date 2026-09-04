@@ -71,10 +71,13 @@ echo; echo "Base setup completed."
 _base
 
 root_packages=(
+blk-utils
 btop
 ethtool
 hping3
 macchanger
+mount-utils
+tsu
 wireless-tools
 )
 
