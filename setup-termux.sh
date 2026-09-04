@@ -113,6 +113,8 @@ echo "" > "$PREFIX/etc/motd"
 
 echo "y" | termux-setup-storage
 
+echo 'set -g fish_greeteng=""' > "$HOME/.config/fish/config.fish"
+
 echo
 if chsh -s "$(command -v fish)"; then
     exit 0
