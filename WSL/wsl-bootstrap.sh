@@ -246,6 +246,7 @@ tar
 tmux
 udisks2
 unzip
+usbutils
 vim
 wget
 which
