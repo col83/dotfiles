@@ -244,6 +244,7 @@ rsync
 strace
 tar
 tmux
+udisks2
 unzip
 vim
 wget

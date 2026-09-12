@@ -15,8 +15,11 @@ if command -v watch >/dev/null 2>&1; then
     alias watch='watch -e -t -c -n 1 -p -x "$@"'
 fi
 
-alias mnt='udisksctl mount -b'
-alias umnt='udisksctl unmount -b'
+# mount
+if command -v udisksctl >/dev/null 2>&1; then
+    alias mnt='udisksctl mount -b'
+    alias umnt='udisksctl unmount -b'
+fi
 
 # fastfetch
 if command -v fastfetch >/dev/null 2>&1; then
